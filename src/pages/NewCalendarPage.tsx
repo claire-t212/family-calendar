@@ -810,6 +810,7 @@ function EventModal({ isOpen, onClose, event, selectedDate, onSave, onDelete }: 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [reminder, setReminder] = useState<number | null>(null);
   const [reminderRepeat, setReminderRepeat] = useState<'none' | 'every_5min' | 'every_15min' | 'every_30min' | 'every_hour'>('none');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Кадрирование - отдельное состояние
   const [showCropper, setShowCropper] = useState(false);
@@ -850,10 +851,11 @@ function EventModal({ isOpen, onClose, event, selectedDate, onSave, onDelete }: 
       setReminder(null);
       setReminderRepeat('none');
     }
-    // Сброс состояния кроппера
+    // Сброс состояния кроппера и отправки
     setShowCropper(false);
     setTempImageSrc('');
     setCompletedCrop(null);
+    setIsSubmitting(false);
   }, [event, selectedDate, isOpen]);
 
   // Выбор фото - открывает кроппер
@@ -904,31 +906,36 @@ function EventModal({ isOpen, onClose, event, selectedDate, onSave, onDelete }: 
   };
 
   // Отправка формы
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Не отправляем если открыт кроппер
-    if (showCropper) return;
+    // Не отправляем если открыт кроппер или уже отправляется
+    if (showCropper || isSubmitting) return;
     
     if (!title.trim()) {
       toast.error('Введите название события');
       return;
     }
 
-    onSave({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      start_date: startDate,
-      start_time: startTime,
-      end_date: endDate || startDate,
-      end_time: endTime,
-      all_day: allDay,
-      color,
-      is_important: isImportant,
-      image_url: imageUrl,
-      reminder,
-      reminder_repeat: reminderRepeat,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        start_date: startDate,
+        start_time: startTime,
+        end_date: endDate || startDate,
+        end_time: endTime,
+        all_day: allDay,
+        color,
+        is_important: isImportant,
+        image_url: imageUrl,
+        reminder,
+        reminder_repeat: reminderRepeat,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Если открыт кроппер - показываем только его
@@ -1223,9 +1230,10 @@ function EventModal({ isOpen, onClose, event, selectedDate, onSave, onDelete }: 
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {event ? 'Сохранить' : 'Создать'}
+              {isSubmitting ? 'Сохранение...' : event ? 'Сохранить' : 'Создать'}
             </button>
           </div>
         </form>
