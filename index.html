@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/family-calendar/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/family-calendar/favicon-16x16.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#f472b6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Наш Календарь" />
+    <link rel="apple-touch-icon" href="/family-calendar/apple-touch-icon.png" />
+    
+    <title>Семейный Календарь</title>
+    
+    <!-- Preconnect to Supabase -->
+    <link rel="preconnect" href="https://supabase.co" />
+    
+    <style>
+      /* Prevent pull-to-refresh on iOS */
+      html, body {
+        overscroll-behavior-y: contain;
+      }
+      
+      /* Safe area insets for notch devices */
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <div id="root">
+      <!-- Показывается пока React загружается -->
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;">
+        <div style="text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">📅</div>
+          <div style="color:#666;">Загрузка...</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

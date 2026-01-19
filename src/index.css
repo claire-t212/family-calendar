@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Шрифт Seenonim */
+@font-face {
+  font-family: 'Seenonim';
+  src: url('/fonts/seenonim-v1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Base styles */
+:root {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+.dark {
+  --color-bg: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100;
+  font-family: 'Seenonim', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Заголовки с шрифтом Seenonim */
+h1, h2, h3, h4, h5, h6, 
+.font-heading {
+  font-family: 'Seenonim', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Safe area padding for iOS */
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-left {
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.safe-right {
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Form inputs */
+input, textarea, select {
+  @apply bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700;
+}
+
+input:focus, textarea:focus, select:focus {
+  @apply ring-2 ring-primary-500 border-primary-500 outline-none;
+}
+
+/* Button transitions */
+button {
+  @apply transition-all duration-200;
+}
+
+/* Calendar day hover effect */
+.calendar-day {
+  @apply transition-all duration-150 ease-out;
+}
+
+.calendar-day:hover {
+  @apply scale-105;
+}
+
+.calendar-day:active {
+  @apply scale-95;
+}
+
+/* Event card */
+.event-card {
+  @apply transition-all duration-200 ease-out;
+}
+
+.event-card:hover {
+  @apply shadow-soft-lg -translate-y-0.5;
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  @apply bg-gradient-to-br from-primary-500 to-primary-700;
+}
+
+.gradient-soft {
+  @apply bg-gradient-to-br from-primary-50 to-white dark:from-slate-800 dark:to-slate-900;
+}
+
+/* Animation utilities */
+.animate-in {
+  animation: animateIn 0.3s ease-out forwards;
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm;
+}
+
+/* Event color indicators */
+.event-color-red { @apply bg-red-500; }
+.event-color-orange { @apply bg-orange-500; }
+.event-color-amber { @apply bg-amber-500; }
+.event-color-yellow { @apply bg-yellow-500; }
+.event-color-lime { @apply bg-lime-500; }
+.event-color-green { @apply bg-green-500; }
+.event-color-emerald { @apply bg-emerald-500; }
+.event-color-teal { @apply bg-teal-500; }
+.event-color-cyan { @apply bg-cyan-500; }
+.event-color-sky { @apply bg-sky-500; }
+.event-color-blue { @apply bg-blue-500; }
+.event-color-indigo { @apply bg-indigo-500; }
+.event-color-violet { @apply bg-violet-500; }
+.event-color-purple { @apply bg-purple-500; }
+.event-color-fuchsia { @apply bg-fuchsia-500; }
+.event-color-pink { @apply bg-pink-500; }
+.event-color-rose { @apply bg-rose-500; }
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-gray-200 dark:bg-slate-700 animate-pulse rounded;
+}
+
+/* iOS-style toggle */
+.toggle {
+  @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors;
+}
+
+.toggle-checked {
+  @apply bg-primary-500;
+}
+
+.toggle-unchecked {
+  @apply bg-gray-200 dark:bg-slate-600;
+}
+
+.toggle-dot {
+  @apply inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform;
+}
+
+/* Online indicator pulse */
+.online-pulse {
+  @apply relative;
+}
+
+.online-pulse::after {
+  content: '';
+  @apply absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75;
+}
+
+/* Text shadow for text on images */
+.text-shadow {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+}
