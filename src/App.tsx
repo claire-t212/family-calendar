@@ -15,6 +15,9 @@ import { CalendarPage } from './pages/NewCalendarPage';
 import { InvitePage } from './pages/InvitePage';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 
+// Push уведомления
+import { subscribeToPush, isPushSupported } from './lib/pushNotifications';
+
 function App() {
   const { user, loading: authLoading, initialize } = useAuthStore();
   const { theme } = useUIStore();
@@ -37,6 +40,21 @@ function App() {
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  // Подписка на push-уведомления
+  useEffect(() => {
+    if (user && isPushSupported()) {
+      // Небольшая задержка для загрузки Service Worker
+      const timer = setTimeout(() => {
+        subscribeToPush(user.id).then((subscription) => {
+          if (subscription) {
+            console.log('[App] Push-уведомления активированы');
+          }
+        });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   // Показываем загрузку при инициализации
   if (authLoading) {

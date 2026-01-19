@@ -50,6 +50,7 @@ import {
   startReminderChecker,
   stopReminderChecker,
 } from '../lib/notifications';
+import { scheduleNotification, cancelScheduledNotification } from '../lib/pushNotifications';
 
 type Tab = 'calendar' | 'important';
 
@@ -683,13 +684,36 @@ export function CalendarPage() {
         selectedDate={selectedDate}
         onSave={async (data) => {
           try {
+            let eventId: string;
+            
             if (selectedEvent) {
               await updateEvent(selectedEvent.id, data);
+              eventId = selectedEvent.id;
               toast.success('Событие обновлено! ✏️');
+              
+              // Отменяем старое уведомление и планируем новое
+              await cancelScheduledNotification(eventId);
             } else {
-              await addEvent(data, user?.id as 'husband' | 'wife');
+              const newEvent = await addEvent(data, user?.id as 'husband' | 'wife');
+              eventId = newEvent?.id || `evt_${Date.now()}`;
               toast.success('Событие создано! 🎉');
             }
+            
+            // Планируем push-уведомление если есть напоминание
+            if (data.reminder && user?.id) {
+              const eventTime = data.all_day 
+                ? new Date(`${data.start_date}T09:00:00`)
+                : new Date(`${data.start_date}T${data.start_time}`);
+              
+              await scheduleNotification({
+                eventId,
+                eventTitle: data.title,
+                userId: user.id,
+                eventTime,
+                reminderMinutes: data.reminder
+              });
+            }
+            
             setEventModalOpen(false);
             setSelectedEvent(null);
           } catch (error) {
@@ -699,6 +723,8 @@ export function CalendarPage() {
         }}
         onDelete={async (id) => {
           try {
+            // Отменяем запланированное уведомление
+            await cancelScheduledNotification(id);
             await deleteEvent(id);
             toast.success('Событие удалено');
             setEventModalOpen(false);
