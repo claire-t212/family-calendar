@@ -53,13 +53,14 @@ export const showNotification = async (
   if (Notification.permission !== 'granted') return null;
   
   try {
-    // Используем Service Worker для показа уведомлений (работает в фоне на iOS)
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    // Используем Service Worker для показа уведомлений (работает в фоне)
+    if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification(title, {
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
+        icon: '/family-calendar/pwa-192x192.png',
+        badge: '/family-calendar/pwa-192x192.png',
         vibrate: [200, 100, 200],
+        requireInteraction: true,
         ...options,
       } as NotificationOptions);
       return null;
@@ -67,7 +68,7 @@ export const showNotification = async (
     
     // Fallback на обычные уведомления
     return new Notification(title, {
-      icon: '/pwa-192x192.png',
+      icon: '/family-calendar/pwa-192x192.png',
       ...options,
     });
   } catch (error) {
@@ -87,35 +88,7 @@ export const showEventNotification = async (
     tag: `event-${eventId}`,
     data: { eventId },
     requireInteraction: true,
-    actions: [
-      { action: 'view', title: 'Посмотреть' },
-      { action: 'dismiss', title: 'Закрыть' },
-    ],
   });
-};
-
-// Планирование локального напоминания
-export const scheduleLocalReminder = (
-  eventId: string,
-  eventTitle: string,
-  reminderTime: Date,
-  eventTime: string
-): number | null => {
-  const now = new Date();
-  const delay = reminderTime.getTime() - now.getTime();
-  
-  if (delay <= 0) return null;
-  
-  const timeoutId = window.setTimeout(() => {
-    showEventNotification(eventTitle, eventTime, eventId);
-  }, delay);
-  
-  return timeoutId;
-};
-
-// Отмена запланированного напоминания
-export const cancelLocalReminder = (timeoutId: number): void => {
-  window.clearTimeout(timeoutId);
 };
 
 // Хранилище для запланированных напоминаний
@@ -127,7 +100,74 @@ interface ScheduledReminder {
 
 const scheduledReminders = new Map<string, ScheduledReminder>();
 
-// Добавить напоминание с поддержкой повторов
+// Ключ для localStorage
+const REMINDERS_STORAGE_KEY = 'family-calendar-pending-reminders';
+
+// Интерфейс для сохранённых напоминаний
+interface SavedReminder {
+  eventId: string;
+  eventTitle: string;
+  reminderTime: string; // ISO string
+  eventTime: string;
+  repeatType: ReminderRepeatType;
+  eventDate: string; // ISO string
+  lastShownAt?: string; // ISO string
+}
+
+// Сохранить напоминания в localStorage
+const saveRemindersToStorage = (reminders: SavedReminder[]): void => {
+  try {
+    localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders));
+  } catch (e) {
+    console.error('Error saving reminders:', e);
+  }
+};
+
+// Загрузить напоминания из localStorage
+const loadRemindersFromStorage = (): SavedReminder[] => {
+  try {
+    const data = localStorage.getItem(REMINDERS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Error loading reminders:', e);
+    return [];
+  }
+};
+
+// Проверить и показать пропущенные/текущие напоминания
+export const checkMissedReminders = async (): Promise<void> => {
+  const savedReminders = loadRemindersFromStorage();
+  const now = new Date();
+  const updatedReminders: SavedReminder[] = [];
+  
+  for (const reminder of savedReminders) {
+    const reminderTime = new Date(reminder.reminderTime);
+    const eventDate = new Date(reminder.eventDate);
+    
+    // Если событие уже прошло - пропускаем
+    if (eventDate < now) continue;
+    
+    // Если время напоминания прошло или наступило, но событие ещё не началось
+    if (reminderTime <= now && eventDate > now) {
+      // Проверяем, не показывали ли мы уже это напоминание недавно
+      const lastShown = reminder.lastShownAt ? new Date(reminder.lastShownAt) : null;
+      const minInterval = 60 * 1000; // Минимум 1 минута между показами
+      
+      if (!lastShown || (now.getTime() - lastShown.getTime() > minInterval)) {
+        console.log('Showing missed reminder for:', reminder.eventTitle);
+        await showEventNotification(reminder.eventTitle, reminder.eventTime, reminder.eventId);
+        reminder.lastShownAt = now.toISOString();
+      }
+    }
+    
+    // Сохраняем напоминание если событие ещё не прошло
+    updatedReminders.push(reminder);
+  }
+  
+  saveRemindersToStorage(updatedReminders);
+};
+
+// Добавить напоминание
 export const addReminder = (
   eventId: string,
   eventTitle: string,
@@ -142,11 +182,44 @@ export const addReminder = (
   const now = new Date();
   const delay = reminderTime.getTime() - now.getTime();
   
-  if (delay <= 0) return;
+  // Сохраняем в localStorage для проверки при открытии приложения
+  const savedReminders = loadRemindersFromStorage();
+  const existingIndex = savedReminders.findIndex(r => r.eventId === eventId);
   
-  // Первое напоминание
+  const newReminder: SavedReminder = {
+    eventId,
+    eventTitle,
+    reminderTime: reminderTime.toISOString(),
+    eventTime,
+    repeatType,
+    eventDate: eventDate.toISOString(),
+  };
+  
+  if (existingIndex >= 0) {
+    savedReminders[existingIndex] = newReminder;
+  } else {
+    savedReminders.push(newReminder);
+  }
+  
+  saveRemindersToStorage(savedReminders);
+  
+  // Если время уже прошло - показываем сразу
+  if (delay <= 0) {
+    showEventNotification(eventTitle, eventTime, eventId);
+    return;
+  }
+  
+  // Планируем напоминание
   const timeoutId = window.setTimeout(() => {
     showEventNotification(eventTitle, eventTime, eventId);
+    
+    // Обновляем lastShownAt в localStorage
+    const reminders = loadRemindersFromStorage();
+    const idx = reminders.findIndex(r => r.eventId === eventId);
+    if (idx >= 0) {
+      reminders[idx].lastShownAt = new Date().toISOString();
+      saveRemindersToStorage(reminders);
+    }
     
     // Если есть повтор и событие ещё не началось
     if (repeatType !== 'none') {
@@ -189,6 +262,11 @@ export const removeReminder = (eventId: string): void => {
     }
     scheduledReminders.delete(eventId);
   }
+  
+  // Удаляем из localStorage
+  const savedReminders = loadRemindersFromStorage();
+  const filtered = savedReminders.filter(r => r.eventId !== eventId);
+  saveRemindersToStorage(filtered);
 };
 
 // Очистить все напоминания
@@ -202,7 +280,7 @@ export const clearAllReminders = (): void => {
   scheduledReminders.clear();
 };
 
-// Инициализация напоминаний из localStorage событий
+// Инициализация напоминаний из событий
 export const initializeReminders = (events: Array<{
   id: string;
   title: string;
@@ -213,28 +291,65 @@ export const initializeReminders = (events: Array<{
   clearAllReminders();
   
   const now = new Date();
+  const newSavedReminders: SavedReminder[] = [];
   
   events.forEach((event) => {
     if (!event.reminder) return;
     
     const eventDate = new Date(event.start_date);
-    const reminderTime = new Date(eventDate.getTime() - event.reminder * 60 * 1000);
     
     // Только для будущих событий
-    if (reminderTime > now) {
-      const eventTimeStr = eventDate.toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-      
-      addReminder(
-        event.id,
-        event.title,
-        reminderTime,
-        eventTimeStr,
-        event.reminder_repeat || 'none',
-        eventDate
-      );
-    }
+    if (eventDate <= now) return;
+    
+    const reminderTime = new Date(eventDate.getTime() - event.reminder * 60 * 1000);
+    
+    const eventTimeStr = eventDate.toLocaleTimeString('ru-RU', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    // Сохраняем для проверки при открытии
+    newSavedReminders.push({
+      eventId: event.id,
+      eventTitle: event.title,
+      reminderTime: reminderTime.toISOString(),
+      eventTime: eventTimeStr,
+      repeatType: event.reminder_repeat || 'none',
+      eventDate: eventDate.toISOString(),
+    });
+    
+    // Планируем (addReminder сам покажет если время прошло)
+    addReminder(
+      event.id,
+      event.title,
+      reminderTime,
+      eventTimeStr,
+      event.reminder_repeat || 'none',
+      eventDate
+    );
   });
+  
+  saveRemindersToStorage(newSavedReminders);
+};
+
+// Запуск периодической проверки напоминаний (каждую минуту)
+let checkInterval: number | null = null;
+
+export const startReminderChecker = (): void => {
+  if (checkInterval) return;
+  
+  // Проверяем сразу при запуске
+  checkMissedReminders();
+  
+  // И каждую минуту
+  checkInterval = window.setInterval(() => {
+    checkMissedReminders();
+  }, 60 * 1000);
+};
+
+export const stopReminderChecker = (): void => {
+  if (checkInterval) {
+    window.clearInterval(checkInterval);
+    checkInterval = null;
+  }
 };
